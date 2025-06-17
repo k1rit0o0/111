@@ -127,3 +127,19 @@ app.post('/admin/delete', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`服务器运行中：http://0.0.0.0:${PORT}`);
 });
+
+
+
+const express = require('express');
+const app = express();
+
+// 定义路由
+app.get('/', (req, res) => {
+  res.send('Hello, World!');
+});
+
+// 监听端口
+const port = 3001;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
