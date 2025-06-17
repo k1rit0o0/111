@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>管理员后台 - 新生信息管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: "微软雅黑", sans-serif;
+      margin: 30px;
+    }
+    input, button {
+      margin: 5px 0;
+      padding: 8px;
+      width: 250px;
+    }
+    button {
+      width: auto;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 15px;
+    }
+    table, th, td {
+      border: 1px solid #aaa;
+      padding: 8px;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🔐 管理员后台</h1>
+
+  <div class="section" id="loginSection">
+    <h2>登录</h2>
+    <input type="password" id="adminPassword" placeholder="管理员密码">
+    <button onclick="adminLogin()">登录</button>
+    <p id="loginMessage" style="color: red;"></p>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+
+    <div class="section">
+      <h2>📋 所有学生信息</h2>
+      <button onclick="fetchStudents()">刷新列表</button>
+      <table id="studentTable">
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>学号</th>
+            <th>微信号</th>
+            <th>寝室</th>
+            <th>班级</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>➕ 添加学生</h2>
+      <input type="text" id="addName" placeholder="姓名">
+      <input type="text" id="addStudentId" placeholder="学号">
+      <input type="text" id="addWechat" placeholder="微信号">
+      <input type="text" id="addDorm" placeholder="寝室">
+      <input type="text" id="addClassId" placeholder="班级">
+      <br>
+      <button onclick="addStudent()">添加</button>
+      <p id="addMessage"></p>
+    </div>
+
+  </div>
+
+  <script>
+    const BASE_URL = location.hostname === 'localhost'
+      ? 'http://localhost:3001'
+      : `http://${location.hostname}:3001`;
+
+    function adminLogin() {
+      const password = document.getElementById('adminPassword').value;
+      fetch(`${BASE_URL}/admin-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('密码错误');
+        return res.json();
+      })
+      .then(() => {
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        fetchStudents();
+      })
+      .catch(() => {
+        document.getElementById('loginMessage').innerText = '密码错误或服务器连接失败';
+      });
+    }
+
+    function fetchStudents() {
+      fetch(`${BASE_URL}/admin/students`)
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.querySelector('#studentTable tbody');
+        tbody.innerHTML = '';
+        data.forEach(student => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${student.name}</td>
+            <td>${student.studentId}</td>
+            <td>${student.wechat}</td>
+            <td>${student.dorm}</td>
+            <td>${student.classId}</td>
+            <td><button onclick="deleteStudent('${student.studentId}')">删除</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      });
+    }
+
+    function addStudent() {
+      const name = document.getElementById('addName').value;
+      const studentId = document.getElementById('addStudentId').value;
+      const wechat = document.getElementById('addWechat').value;
+      const dorm = document.getElementById('addDorm').value;
+      const classId = document.getElementById('addClassId').value;
+
+      if (!name || !studentId || !wechat || !dorm || !classId) {
+        document.getElementById('addMessage').innerText = '请填写完整信息';
+        return;
+      }
+
+      fetch(`${BASE_URL}/admin/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, studentId, wechat, dorm, classId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('addMessage').innerText = data.message;
+        fetchStudents(); // 刷新列表
+      })
+      .catch(() => {
+        document.getElementById('addMessage').innerText = '添加失败';
+      });
+    }
+
+    function deleteStudent(studentId) {
+      if (!confirm(`确认要删除学号为 ${studentId} 的学生？`)) return;
+
+      fetch(`${BASE_URL}/admin/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        fetchStudents();
+      })
+      .catch(() => alert("删除失败"));
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>新生录入系统</title>
+  <style>
+    body {
+      font-family: "微软雅黑", sans-serif;
+      margin: 30px;
+    }
+    input, button {
+      margin: 5px 0;
+      padding: 8px;
+      width: 250px;
+      display: block;
+    }
+    button {
+      width: 260px;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎓 新生信息录入系统</h1>
+
+  <div class="section">
+    <h2>📥 提交你的信息</h2>
+    <input type="text" id="name" placeholder="姓名">
+    <input type="text" id="studentId" placeholder="学号">
+    <input type="text" id="wechat" placeholder="微信号">
+    <button onclick="register()">提交信息</button>
+    <p id="registerResult" style="color: green;"></p>
+  </div>
+
+  <div class="section">
+    <h2>🔍 查看班级信息</h2>
+    <input type="text" id="queryId" placeholder="请输入你的学号">
+    <button onclick="getClassInfo()">查询</button>
+    <div id="classInfo" style="margin-top: 15px;"></div>
+  </div>
+
+  <div class="section">
+    <h2>✏️ 修改 / 删除我的信息</h2>
+    <input type="text" id="editStudentId" placeholder="请输入学号（必填）">
+    <input type="text" id="editName" placeholder="新的名字（可选）">
+    <input type="text" id="editWechat" placeholder="新的微信号（可选）">
+    <button onclick="updateInfo()">更新信息</button>
+    <button onclick="deleteInfo()">删除我的信息</button>
+  </div>
+
+  <div class="section">
+    <h2>🗺️ 校园地图</h2>
+    <img src="校园地图.jpg" alt="校园地图" style="max-width: 100%; height: auto; border: 1px solid #ccc;">
+  </div>
+
+  <script>
+    // 如果你要让别人访问，把这里改成你电脑的 IP 地址（如 192.168.1.100）
+    const BASE_URL = 'http://localhost:3001';
+
+    async function register() {
+      const name = document.getElementById('name').value.trim();
+      const studentId = document.getElementById('studentId').value.trim();
+      const wechat = document.getElementById('wechat').value.trim();
+      const resultEl = document.getElementById('registerResult');
+
+      if (!name || !studentId || !wechat) {
+        resultEl.innerText = '请填写所有信息！';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BASE_URL}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, studentId, wechat })
+        });
+        const data = await res.json();
+        resultEl.innerText = data.message || '未知错误';
+      } catch (err) {
+        resultEl.innerText = '连接服务器失败';
+      }
+    }
+
+    async function getClassInfo() {
+      const studentId = document.getElementById('queryId').value.trim();
+      const classInfoDiv = document.getElementById('classInfo');
+
+      if (!studentId) {
+        classInfoDiv.innerText = '请输入学号';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BASE_URL}/class-info`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId })
+        });
+        const data = await res.json();
+
+        if (data.classmates) {
+          let html = `<p>🛏️ 你的寝室：${data.yourInfo.dorm}</p>`;
+          html += `<p>👨‍🎓 你的班级：${data.yourInfo.classId}</p>`;
+          html += `<h3>👫 同班同学：</h3><ul>`;
+          data.classmates.forEach(s => {
+            html += `<li>${s.name} - 微信：${s.wechat}</li>`;
+          });
+          html += `</ul>`;
+          classInfoDiv.innerHTML = html;
+        } else {
+          classInfoDiv.innerText = data.message || '查询失败';
+        }
+      } catch (err) {
+        classInfoDiv.innerText = '无法连接服务器';
+      }
+    }
+
+    function updateInfo() {
+      const studentId = document.getElementById('editStudentId').value.trim();
+      const name = document.getElementById('editName').value.trim();
+      const wechat = document.getElementById('editWechat').value.trim();
+
+      if (!studentId) {
+        alert("请填写学号！");
+        return;
+      }
+
+      fetch(`${BASE_URL}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, name, wechat })
+      })
+      .then(res => res.json())
+      .then(data => alert(data.message))
+      .catch(() => alert("请求失败"));
+    }
+
+    function deleteInfo() {
+      const studentId = document.getElementById('editStudentId').value.trim();
+      if (!studentId) {
+        alert("请输入学号！");
+        return;
+      }
+
+      if (!confirm("你确定要删除你的信息吗？这将无法恢复！")) return;
+
+      fetch(`${BASE_URL}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId })
+      })
+      .then(res => res.json())
+      .then(data => alert(data.message))
+      .catch(() => alert("请求失败"));
+    }
+  </script>
+
+</body>
+</html>
